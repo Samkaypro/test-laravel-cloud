@@ -16,10 +16,20 @@ class TodoController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $todolist = Todo::where('user_id', auth()->id())->latest()->get();
+            $query = Todo::where('user_id', auth()->id());
+
+            // Search and filtering
+            if ($request->has('search')) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('title', 'like', '%' . $request->search . '%')
+                      ->orWhere('description', 'like', '%' . $request->search . '%');
+                });
+            }
+
+            $todolist = $query->latest()->paginate(10); // Paginate with 10 items per page
             $this->logInfo('Accessed Todo List', 'GET');
         } catch (Exception $error) {
             $this->logError('Failed to access Todo List', $error);
@@ -45,7 +55,7 @@ class TodoController extends Controller
                 'title' => $request->title,
                 'description' => $request->description,
                 'completed' => $request->completed,
-                'user_id' => auth()->id(), // Add this line
+                'user_id' => auth()->id(),
             ]);
             $this->logInfo('Todo List Created', 'POST');
 
